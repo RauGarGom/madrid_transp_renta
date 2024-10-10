@@ -17,7 +17,7 @@ La hipótesis principal de este proyecto es que **existe una relación entre la 
 
 ## SUPUESTOS
 Dados los datos utilizados, hemos de tener en cuenta varios puntos:
-+ Se está utilizando la última encuesta publicada por el CRTM (en serio).
++ Se está utilizando la última encuesta publicada por el CRTM.
     + Sí se cuentan con los datos de uso del Metro de Madrid, que en 2023 volvieron a niveles pre-pandemia. Por tanto, podemos suponer que no han cambiado las pautas de comportamiento en un nivel agregado
 + No contamos con la renta de los encuestados. Para ello generaremos un dato *proxy*, que estimaremos en función de las condiciones socioeconómicas de los encuestados (edad, ocupación, género, grado de educación, y si cuenta con coche).
     + Renta != Riqueza. Estimaremos la cantidad de **generar** , no de **poseer**. Una persona sin trabajo pero con patrimonio no quedará reflejada en este estudio.
