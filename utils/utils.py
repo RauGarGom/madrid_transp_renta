@@ -1,7 +1,6 @@
-import hashlib
 import requests
-import datetime
 import pandas as pd
+import os
 
 def retrieve_aemet(url,data_destination):
     ''' This function retrieves data to be used as weather. url has to be given by AEMET
@@ -15,6 +14,8 @@ def retrieve_aemet(url,data_destination):
 def main_dfs_treat(trip,indiv,weather):
     ''' Ensembles the required data in order to extract the main database. From a weather, 
     individuals and trips database, it returns a merged and more treatable dataframe.'''
+    
+    print("Transforming data")
     # Weather:
     weather['datemerge'] = weather['fecha'].str.split("-")
     weather['datemerge']
@@ -47,7 +48,7 @@ def main_dfs_treat(trip,indiv,weather):
                             'DMES' : 'month',
                             'DANNO' : 'year',
                             'DIASEM' : 'week_day',}, inplace=True)
-    indiv = indiv[['id_indiv','gender','age','indiv_pond','spanish','studies','activity','day','month','year','datemerge','tmed','prec']]
+    indiv = indiv[['id_indiv','gender','age','spanish','studies','activity','day','month','year','datemerge','tmed','prec']]
 
     ###Trips:
     ### Trips Survey - Arranging ids, Column study / renaming / drop
@@ -57,9 +58,26 @@ def main_dfs_treat(trip,indiv,weather):
                                 'VNOPUBLICO': 'no_public',
                                 'MOTIVO_PRIORITARIO': 'reason',
                                 'DISTANCIA_VIAJE': 'distance',
-                                'ELE_G_POND_ESC2': 'trip_pond'},inplace=True)
-    trip = trip[['id_indiv','id_trip','freq','reason','distance','trip_pond']]
+                                'ELE_G_POND_ESC2': 'trip_pond',
+                                'VORIHORAINI': 'start_trip'},inplace=True)
+    trip = trip[['id_indiv','id_trip','start_trip','freq','reason','distance','trip_pond']]
     ### Merge of indivs and trips:
     transp = pd.merge(trip,indiv, on="id_indiv", how="left")
-    
+
     return transp
+
+def data_extraction(pth_indiv,pth_trip,pth_weather,pth_result):
+    # TODO: Any way of inserting this on utils without messing up the paths? Maybe
+    # giving the paths as arguments?
+    '''WARNING: Slow function, as the raw data is quite heavy. If it finds there is
+    an already resulting csv, it stops.'''
+    print("Extracting data...")
+    if os.path.isfile(pth_result) == True:
+        print(pth_result, "already exists")
+    else:
+        df_transp_ind = pd.DataFrame(pd.read_excel(pth_indiv, sheet_name = 'INDIVIDUOS'))
+        df_transp_trp = pd.DataFrame(pd.read_excel(pth_trip, sheet_name = 'VIAJES'))
+        df_weather=pd.DataFrame(pd.read_csv(pth_weather))
+        df_transp = main_dfs_treat(df_transp_trp,df_transp_ind,df_weather)
+        df_transp.to_csv("./data/treated/transp.csv",index_label=False)
+        print("CSV on path", pth_result, "created")
