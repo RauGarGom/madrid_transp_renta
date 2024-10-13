@@ -187,7 +187,7 @@ def transp_conversion(df_transp):
     print("Data converted")
     return df_transp
 
-def data_extraction(pth_indiv,pth_trip,pth_weather,pth_result):
+def main_data_extraction(pth_indiv,pth_trip,pth_weather,pth_result):
     '''WARNING: Slow function, as the raw data is quite heavy. If it finds there is
     an already resulting csv, it stops.'''
     print("Extracting data...")
@@ -202,17 +202,53 @@ def data_extraction(pth_indiv,pth_trip,pth_weather,pth_result):
         df_transp.to_csv("./data/treated/transp.csv",index_label=False)
         print("CSV on path", pth_result, "created")
 
+def income_assign(df_main,df_educ,df_occup,df_gender_age):
+    '''Income index contructor. Base level of 100, it gets multiplied by gender, age, education and activity, each adding 
+    a base weight of 25'''
+    print("Assigning income...")
+    df_main['income'] = 100
+
+    # Education
+    df_main['income'] = np.where(df_main['studies'] == 'primary', df_main['income']+25*df_educ.iloc[0] ,df_main['income'])
+    df_main['income'] = np.where(df_main['studies'] == 'second1', df_main['income']+25*df_educ.iloc[1] ,df_main['income'])
+    df_main['income'] = np.where(df_main['studies'] == 'second2', df_main['income']+25*df_educ.iloc[2] ,df_main['income'])
+    df_main['income'] = np.where(df_main['studies'] == 'superior', df_main['income']+25*df_educ.iloc[3] ,df_main['income'])
+
+    # Activity
+    df_main['income'] = np.where(df_main['activity'] == 'worker', df_main['income']+25*df_occup.iloc[0],df_main['income'])
+    df_main['income'] = np.where(df_main['activity'] == 'student', df_main['income']+25*df_occup.iloc[3],df_main['income']) ###Students are counted as other inactive
+    df_main['income'] = np.where(df_main['activity'] == 'retired', df_main['income']+25*df_occup.iloc[2],df_main['income'])
+    df_main['income'] = np.where(df_main['activity'] == 'jobless', df_main['income']+25*df_occup.iloc[1],df_main['income'])
+    df_main['income'] = np.where(df_main['activity'] == 'other', df_main['income']+25*df_occup.iloc[3],df_main['income'])
+
+    #Gender, age
+    df_main['income'] = np.where((df_main['gender'] == 'male') & (df_main['age'] < 16), df_main['income']+50*df_gender_age.iloc[0,0],df_main['income'])
+    df_main['income'] = np.where((df_main['gender'] == 'male') & (df_main['age'] >= 16) & (df_main['age'] < 30), df_main['income']+50*df_gender_age.iloc[1,0],df_main['income'])
+    df_main['income'] = np.where((df_main['gender'] == 'male') & (df_main['age'] >= 30) & (df_main['age'] < 45), df_main['income']+50*df_gender_age.iloc[2,0],df_main['income'])
+    df_main['income'] = np.where((df_main['gender'] == 'male') & (df_main['age'] >= 45) & (df_main['age'] < 65), df_main['income']+50*df_gender_age.iloc[3,0],df_main['income'])
+    df_main['income'] = np.where((df_main['gender'] == 'male') & (df_main['age'] >= 65), df_main['income']+50*df_gender_age.iloc[4,0],df_main['income'])
+
+    df_main['income'] = np.where((df_main['gender'] == 'female') & (df_main['age'] < 16), df_main['income']+50*df_gender_age.iloc[0,1],df_main['income'])
+    df_main['income'] = np.where((df_main['gender'] == 'female') & (df_main['age'] >= 16) & (df_main['age'] < 30), df_main['income']+50*df_gender_age.iloc[1,1],df_main['income'])
+    df_main['income'] = np.where((df_main['gender'] == 'female') & (df_main['age'] >= 30) & (df_main['age'] < 45), df_main['income']+50*df_gender_age.iloc[2,1],df_main['income'])
+    df_main['income'] = np.where((df_main['gender'] == 'female') & (df_main['age'] >= 45) & (df_main['age'] < 65), df_main['income']+50*df_gender_age.iloc[3,1],df_main['income'])
+    df_main['income'] = np.where((df_main['gender'] == 'female') & (df_main['age'] >= 65), df_main['income']+50*df_gender_age.iloc[4,1],df_main['income'])
+    print("Income assigned")
+    return df_main
+
 def pie_charts(pies,df):
     ''' Generates pie charts of the columns included in a "pies" list, from the "df"
     dataframe'''
+    print("Generating pie charts...")
     for pie in pies:
         plt.figure()
         plt.pie(df[pie].value_counts().values, labels = df[pie].value_counts().index,autopct='%1.1f%%')
-        plt.savefig("./img/plots/"+pie+"_distrib.png")
-    print("Pie charts generated in /img/plots")
+        plt.savefig("./img/plots/pies/"+pie+"_distrib.png")
+    print("Pie charts generated in /img/plots/pies")
 
 def dry_rain (df):
     ''' Generates a csv with a comparison of usage of transportation and weather'''
+    print("Generating dry/rain comparison")
     dry_work_filter = (df['weather']=="dry") & (df['reason']=="work")
     rain_work_filter = (df['weather']=="rain") & (df['reason']=="work")
     dry_work = round(df[dry_work_filter].groupby('transport')["id_indiv"].count()/len(df[dry_work_filter])*100,1)
@@ -221,3 +257,25 @@ def dry_rain (df):
     weather_work['difference'] = round(weather_work['dry']-weather_work['rain'],1)
     weather_work.to_csv("./data/output/weather_work.csv",index_label=False)
     print("Dry/rain comparison saved on data/output/weather_work.csv")
+
+def aux_data_extraction():
+    ''' Extracts different incomes (gender, age, education, occupation) and returns normalized indexes in dataframes'''
+    print("Extracting auxiliary data...")
+    # Gender and age, single dataframe
+    df_men_age = pd.DataFrame(pd.read_excel("./data/raw/ecv19.xlsx", sheet_name="2.1.1",skiprows=19,index_col=1,nrows=5,header=None))
+    df_women_age = pd.DataFrame(pd.read_excel("./data/raw/ecv19.xlsx", sheet_name="2.1.1",skiprows=26,index_col=1,nrows=5,header=None))
+    df_gender_age = pd.concat([df_men_age.iloc[:,1],df_women_age.iloc[:,1]],axis=1, keys=["men","women"])
+    df_gender_age = round(((df_gender_age-np.nanmean(df_gender_age))/np.nanstd(df_gender_age)+1),2) ### np.nanmean takes the mean of the whole df
+    df_gender_age
+
+    # Education
+    df_educ = pd.DataFrame(pd.read_excel("./data/raw/ecv19.xlsx", sheet_name="2.1.2",skiprows=11,index_col=1,nrows=4,header=None)).iloc[:,1]
+    df_educ = round(((df_educ-df_educ.mean())/df_educ.std()+1),2)
+    df_educ
+
+    # Occupation
+    df_occup = pd.DataFrame(pd.read_excel("./data/raw/ecv19.xlsx", sheet_name="2.1.3",skiprows=11,index_col=1,nrows=4,header=None)).iloc[:,1]
+    df_occup = round(((df_occup-df_occup.mean())/df_occup.std()+1),2)
+    df_occup
+    print("Auxiliary data extracted")
+    return df_gender_age,df_educ,df_occup
