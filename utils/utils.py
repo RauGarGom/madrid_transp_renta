@@ -1,5 +1,7 @@
 import requests
+import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import os
 
 def retrieve_aemet(url,data_destination):
@@ -15,7 +17,7 @@ def main_dfs_treat(trip,indiv,weather):
     ''' Ensembles the required data in order to extract the main database. From a weather, 
     individuals and trips database, it returns a merged and more treatable dataframe.'''
     
-    print("Transforming data")
+    print("Merging databases...")
     # Weather:
     weather['datemerge'] = weather['fecha'].str.split("-")
     weather['datemerge']
@@ -27,9 +29,10 @@ def main_dfs_treat(trip,indiv,weather):
     weather['day'].head(50)
     ### Concatenate year, month, day
     weather['datemerge'] = weather['year']+"-"+weather['month']+"-"+weather['day']
+    
 
-    ### Indiv:
-    # Individual Survey - Date conversor for merge
+    # Indiv:
+    ### Individual Survey - Date conversor for merge
     indiv['datemerge'] = indiv['DANNO'].astype(str) + '-' + indiv['DMES'].astype(str) + '-' + indiv['DDIA'].astype(str)
     ### Concatenate columns so we get an unique id
     indiv['id_indiv']=indiv['ID_HOGAR'].astype(str) + indiv['ID_IND'].astype(str)
@@ -48,9 +51,9 @@ def main_dfs_treat(trip,indiv,weather):
                             'DMES' : 'month',
                             'DANNO' : 'year',
                             'DIASEM' : 'week_day',}, inplace=True)
-    indiv = indiv[['id_indiv','gender','age','spanish','studies','activity','day','month','year','datemerge','tmed','prec']]
+    indiv = indiv[['id_indiv','gender','age','spanish','studies','activity','day','month','year','week_day','datemerge','tmed','prec']]
 
-    ###Trips:
+    #Trips:
     ### Trips Survey - Arranging ids, Column study / renaming / drop
     trip['id_indiv']=trip['ID_HOGAR'].astype(str) + trip['ID_IND'].astype(str)
     trip['id_trip']=trip['id_indiv'].astype(str) + trip['ID_VIAJE'].astype(str)
@@ -59,16 +62,132 @@ def main_dfs_treat(trip,indiv,weather):
                                 'MOTIVO_PRIORITARIO': 'reason',
                                 'DISTANCIA_VIAJE': 'distance',
                                 'ELE_G_POND_ESC2': 'trip_pond',
-                                'VORIHORAINI': 'start_trip'},inplace=True)
-    trip = trip[['id_indiv','id_trip','start_trip','freq','reason','distance','trip_pond']]
+                                'VORIHORAINI': 'start_trip',
+                                'MODO_PRIORITARIO': 'transport'},inplace=True)
+    trip = trip[['id_indiv','id_trip','start_trip','transport','freq','reason','distance','trip_pond']]
     ### Merge of indivs and trips:
     transp = pd.merge(trip,indiv, on="id_indiv", how="left")
 
+    ###Treatment of transp:
+    ### Convert tmed and prec to float
+    transp['tmed']=transp['tmed'].str.replace(",",".").astype(float)
+    transp['prec']=transp['prec'].str.replace("Ip","0") ### We count rain of < 0.1 mm as dry weather.
+    transp['prec']=transp['prec'].str.replace(",",".").astype(float)
+
     return transp
 
+def transp_conversion(df_transp):
+    ''' Converts the categorical info to text, so the content is more readable. It also
+    creates a new column, "weather" ("dry" if <0.1mm, "rain" if else)
+    '''
+    ### Convert as strings so we can apply the effects of the lists. As soon as one value is str, the whole 
+    ### series is converted into object
+    print("Converting data...")
+    df_transp['transport'] = df_transp['transport'].astype(str)
+    df_transp['reason'] = df_transp['reason'].astype(str)
+    df_transp['activity'] = df_transp['activity'].astype(str)
+    df_transp['studies'] = df_transp['studies'].astype(str)
+    df_transp['gender'] = df_transp['gender'].astype(str)
+    df_transp['week_day'] = df_transp['week_day'].astype(str)
+
+    #Transport:
+    ''' 
+    "public". Includes the original 1,2,3,4,5,6,7,8 and 9
+    "taxi". Includes the original 10
+    "car". Includes 11,12,13,14,15,16
+    "motorbike". Includes 17,18,19
+    "bike". Includes 20,21,22 
+    "walking". Includes 23
+    "other". Includes 24
+    '''
+    public = ["1","2","3","4","5","6","7","8","9"]
+    taxi = ["10"]
+    car = ["11","12","13","14","15","16"]
+    motorbike = ["17","18","19"]
+    bike = ["20","21","22"]
+    walking = ["24"]
+    other = ["23"]
+
+    df_transp['transport'] = np.where(df_transp['transport'].isin(public), "public" ,df_transp['transport'])
+    df_transp['transport'] = np.where(df_transp['transport'].isin(taxi), "taxi" ,df_transp['transport'])
+    df_transp['transport'] = np.where(df_transp['transport'].isin(car), "car" ,df_transp['transport'])
+    df_transp['transport'] = np.where(df_transp['transport'].isin(motorbike), "motorbike" ,df_transp['transport'])
+    df_transp['transport'] = np.where(df_transp['transport'].isin(bike), "bike" ,df_transp['transport'])
+    df_transp['transport'] = np.where(df_transp['transport'].isin(walking), "walking" ,df_transp['transport'])
+    df_transp['transport'] = np.where(df_transp['transport'].isin(other), "other" ,df_transp['transport'])
+
+    #Reason:
+    '''
+    "home". Includes the original 1 and 11.
+    "work". Includes 2 and 3.
+    "study". Includes 4.
+    "leisure". Includes 8 and 9
+    "personal". Includes 6,7,10
+    "other". Includes 12.
+    '''
+    home = ["1","11"]
+    work = ["2","3"]
+    study = ["4"]
+    leisure = ["8","9"]
+    shopping = ["5"]
+    personal = ["6","7","10"]
+    other = ["12"]
+
+    df_transp['reason'] = np.where(df_transp['reason'].isin(home), "home" ,df_transp['reason'])
+    df_transp['reason'] = np.where(df_transp['reason'].isin(work), "work" ,df_transp['reason'])
+    df_transp['reason'] = np.where(df_transp['reason'].isin(study), "study" ,df_transp['reason'])
+    df_transp['reason'] = np.where(df_transp['reason'].isin(leisure), "leisure" ,df_transp['reason'])
+    df_transp['reason'] = np.where(df_transp['reason'].isin(shopping), "shopping" ,df_transp['reason'])
+    df_transp['reason'] = np.where(df_transp['reason'].isin(personal), "personal" ,df_transp['reason'])
+    df_transp['reason'] = np.where(df_transp['reason'].isin(other), "other" ,df_transp['reason'])
+
+    # Activity:
+    '''
+    "worker". Includes the original 1 and 2.
+    "retired". Includes 3.
+    "jobless". Includes 4,5,7 and 8
+    "student". Includes 6
+    "other". Includes 9
+    '''
+    worker = ["1","2"]
+    jobless = ["4","5","7","8"]
+    df_transp['activity'] = np.where(df_transp['activity'].isin(worker), "worker" ,df_transp['activity'])
+    df_transp['activity'] = np.where(df_transp['activity'].isin(jobless), "jobless" ,df_transp['activity'])
+    df_transp['activity'] = np.where(df_transp['activity'] == "3", "retired" ,df_transp['activity'])
+    df_transp['activity'] = np.where(df_transp['activity'] == "6", "student" ,df_transp['activity'])
+    df_transp['activity'] = np.where(df_transp['activity'] == "9", "other" ,df_transp['activity'])
+
+    # Studies:
+    '''
+    "primary". Includes the original 1 and 2 (primary or less).
+    "second1". Includes 3.
+    "second2". Includes 4 and 5
+    "superior". Includes 6 and 7
+    '''
+    primary = ["1","2"]
+    second2 = ["4","5"]
+    superior = ["6","7"]
+    df_transp['studies'] = np.where(df_transp['studies'].isin(primary), "primary" ,df_transp['studies'])
+    df_transp['studies'] = np.where(df_transp['studies'] == "3", "second1" ,df_transp['studies'])
+    df_transp['studies'] = np.where(df_transp['studies'].isin(second2), "second2" ,df_transp['studies'])
+    df_transp['studies'] = np.where(df_transp['studies'].isin(superior), "superior" ,df_transp['studies'])
+
+    # Gender:
+    df_transp['gender'] = np.where(df_transp['gender'] == "1", "male" ,"female")
+
+    #Day of week:
+    df_transp['week_day'] = np.where(df_transp['week_day'] == "1", "monday" ,df_transp['week_day'])
+    df_transp['week_day'] = np.where(df_transp['week_day'] == "2", "tuesday" ,df_transp['week_day'])
+    df_transp['week_day'] = np.where(df_transp['week_day'] == "3", "wednesday" ,df_transp['week_day'])
+    df_transp['week_day'] = np.where(df_transp['week_day'] == "4", "thursday" ,df_transp['week_day'])
+    
+    #Weather - new variable from prec
+    df_transp['weather'] = np.where(df_transp['prec'] < 0.1,"dry","rain")
+
+    print("Data converted")
+    return df_transp
+
 def data_extraction(pth_indiv,pth_trip,pth_weather,pth_result):
-    # TODO: Any way of inserting this on utils without messing up the paths? Maybe
-    # giving the paths as arguments?
     '''WARNING: Slow function, as the raw data is quite heavy. If it finds there is
     an already resulting csv, it stops.'''
     print("Extracting data...")
@@ -78,6 +197,27 @@ def data_extraction(pth_indiv,pth_trip,pth_weather,pth_result):
         df_transp_ind = pd.DataFrame(pd.read_excel(pth_indiv, sheet_name = 'INDIVIDUOS'))
         df_transp_trp = pd.DataFrame(pd.read_excel(pth_trip, sheet_name = 'VIAJES'))
         df_weather=pd.DataFrame(pd.read_csv(pth_weather))
-        df_transp = main_dfs_treat(df_transp_trp,df_transp_ind,df_weather)
+        df_transp = main_dfs_treat(df_transp_trp,df_transp_ind,df_weather) ### Merges the three dbs
+        df_transp = transp_conversion(df_transp) ### Applies conversion on data.
         df_transp.to_csv("./data/treated/transp.csv",index_label=False)
         print("CSV on path", pth_result, "created")
+
+def pie_charts(pies,df):
+    ''' Generates pie charts of the columns included in a "pies" list, from the "df"
+    dataframe'''
+    for pie in pies:
+        plt.figure()
+        plt.pie(df[pie].value_counts().values, labels = df[pie].value_counts().index,autopct='%1.1f%%')
+        plt.savefig("./img/plots/"+pie+"_distrib.png")
+    print("Pie charts generated in /img/plots")
+
+def dry_rain (df):
+    ''' Generates a csv with a comparison of usage of transportation and weather'''
+    dry_work_filter = (df['weather']=="dry") & (df['reason']=="work")
+    rain_work_filter = (df['weather']=="rain") & (df['reason']=="work")
+    dry_work = round(df[dry_work_filter].groupby('transport')["id_indiv"].count()/len(df[dry_work_filter])*100,1)
+    rain_work = round(df[rain_work_filter].groupby('transport')["id_indiv"].count()/len(df[rain_work_filter])*100,1)
+    weather_work = pd.concat([dry_work,rain_work],axis=1,keys=["dry","rain"])
+    weather_work['difference'] = round(weather_work['dry']-weather_work['rain'],1)
+    weather_work.to_csv("./data/output/weather_work.csv",index_label=False)
+    print("Dry/rain comparison saved on data/output/weather_work.csv")
