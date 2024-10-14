@@ -2,6 +2,8 @@ import requests
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import seaborn as sns
 import os
 
 def retrieve_aemet(url,data_destination):
@@ -233,30 +235,42 @@ def income_assign(df_main,df_educ,df_occup,df_gender_age):
     df_main['income'] = np.where((df_main['gender'] == 'female') & (df_main['age'] >= 30) & (df_main['age'] < 45), df_main['income']+50*df_gender_age.iloc[2,1],df_main['income'])
     df_main['income'] = np.where((df_main['gender'] == 'female') & (df_main['age'] >= 45) & (df_main['age'] < 65), df_main['income']+50*df_gender_age.iloc[3,1],df_main['income'])
     df_main['income'] = np.where((df_main['gender'] == 'female') & (df_main['age'] >= 65), df_main['income']+50*df_gender_age.iloc[4,1],df_main['income'])
-    print("Income assigned")
+    df_main.to_csv("./data/treated/transp.csv",index_label=False)
+    print("Income assigned and updated in ./data/treated/transp.csv")
     return df_main
 
 def pie_charts(pies,df):
     ''' Generates pie charts of the columns included in a "pies" list, from the "df"
     dataframe'''
     print("Generating pie charts...")
+    plt.style.use('seaborn-v0_8-deep')
     for pie in pies:
         plt.figure()
         plt.pie(df[pie].value_counts().values, labels = df[pie].value_counts().index,autopct='%1.1f%%')
+        plt.title(pie)
         plt.savefig("./img/plots/pies/"+pie+"_distrib.png")
     print("Pie charts generated in /img/plots/pies")
 
 def dry_rain (df):
     ''' Generates a csv with a comparison of usage of transportation and weather'''
     print("Generating dry/rain comparison")
+    dry_filter=df['weather']=="dry"
+    rain_filter=df['weather']=="rain"
+    dry = round(df[dry_filter].groupby('transport')["id_indiv"].count()/len(df[dry_filter])*100,1)
+    rain = round(df[rain_filter].groupby('transport')["id_indiv"].count()/len(df[rain_filter])*100,1)
+    weather = pd.concat([dry,rain],axis=1,keys=["dry","rain"])
+    weather['difference'] = round(weather['rain']-weather['dry'],1)
+    print(weather['difference'])
+    weather.to_csv("./data/output/weather.csv",index_label=False)
+
     dry_work_filter = (df['weather']=="dry") & (df['reason']=="work")
     rain_work_filter = (df['weather']=="rain") & (df['reason']=="work")
     dry_work = round(df[dry_work_filter].groupby('transport')["id_indiv"].count()/len(df[dry_work_filter])*100,1)
     rain_work = round(df[rain_work_filter].groupby('transport')["id_indiv"].count()/len(df[rain_work_filter])*100,1)
     weather_work = pd.concat([dry_work,rain_work],axis=1,keys=["dry","rain"])
-    weather_work['difference'] = round(weather_work['dry']-weather_work['rain'],1)
+    weather_work['difference'] = round(weather_work['rain']-weather_work['dry'],1)
     weather_work.to_csv("./data/output/weather_work.csv",index_label=False)
-    print("Dry/rain comparison saved on data/output/weather_work.csv")
+    print("Dry/rain comparison saved on data/output")
 
 def aux_data_extraction():
     ''' Extracts different incomes (gender, age, education, occupation) and returns normalized indexes in dataframes'''
@@ -279,3 +293,76 @@ def aux_data_extraction():
     df_occup
     print("Auxiliary data extracted")
     return df_gender_age,df_educ,df_occup
+
+def weather_change(df_weather,df_weather_work):
+    ''' Makes two bar plots, showing the difference between the usage of transportation on a dry and
+    a rainy day. It also compares only when only working trips are taken into account'''
+    plt.style.use('seaborn-v0_8-deep')
+    print("Plotting weather comparison...")
+    ###Colors
+    initial_color = np.array([0, 0, 1])
+    final_color = np.array([1, 0.5, 0])
+    norm_weather = (df_weather['difference']-df_weather['difference'].min()) / (df_weather['difference'].max() - df_weather['difference'].min())
+    colors_weather = [mcolors.to_hex(initial_color * (1 - n) + final_color * n) for n in norm_weather]
+    norm_weather_work = (df_weather_work['difference']-df_weather_work['difference'].min()) / (df_weather_work['difference'].max() - df_weather_work['difference'].min())
+    colors_weather_work = [mcolors.to_hex(initial_color * (1 - n) + final_color * n) for n in norm_weather_work]
+    ### Drawing
+    plt.figure()
+
+    plt.subplot(2, 1, 1) # filas, columnas, posición
+    plt.bar(df_weather.index,df_weather['difference'],color=colors_weather)
+    plt.ylim(-4, 4)
+    plt.title("Difference of transport usage when raining (percentual points)")
+    plt.subplot(2, 1, 2) # filas, columnas, posición
+    plt.bar(df_weather_work.index,df_weather_work['difference'],color=colors_weather_work)
+    plt.ylim(-4, 4)
+    plt.title("Difference of transport usage for workers when raining (percentual points)")
+    plt.tight_layout()
+    plt.savefig("./img/plots/bars/transport_change_weather.png");
+    print("Weather comparison plotted and saved in img/plots/bars/transport_change_weather.png")
+
+def income_dist(df):
+    '''Creates two histograms displaying the distribution of income, both total and workers.
+    Saves the plot on hists'''
+    print("Plotting income distribution...")
+    plt.figure()
+    plt.style.use('seaborn-v0_8-deep')
+    min_val = min(df['income'].min(),df[df['activity'] == "worker"]['income'].min())
+    max_val = max(df['income'].max(),df[df['activity'] == "worker"]['income'].max())
+    bins = np.linspace(min_val, max_val, 10)
+    sns.histplot(df['income'],label="Total",bins=bins)
+    sns.histplot(df[df['activity'] == "worker"]['income'],label="Workers",bins=bins, multiple="layer")
+    plt.title("Distribution of expected income")
+    plt.legend()
+    plt.savefig('./img/plots/hists/distr_income.png');
+    print("Plotting distribution finished")
+
+def hypo_1(df):
+    '''Includes all the needed plots to prove whether there is a link between income and transport usage, by workers.
+    It starts by selecting only the trips made by workers on dry days, and then it displays a box plot with a gradient of colors
+    given by the median of each group, printing the number of observations.
+    '''
+    print("Plotting charts for hypothesis 1...")
+    df_transp_dry_work = df[(df["weather"] == "dry") & (df["reason"] == "work")]
+    plt.figure()
+    ###Colors
+    transp_medians = df_transp_dry_work.groupby('transport')['income'].median().sort_index(ascending=True)
+    initial_color = np.array([1, 0, 0])
+    final_color = np.array([0, 1, 0])
+    norm_medians = (transp_medians-transp_medians.min()) / (transp_medians.max() - transp_medians.min())
+    colors_medians = [mcolors.to_hex(initial_color * (1 - n) + final_color * n) for n in norm_medians]
+
+    ### HIPÓTESIS 1: Análisis
+    #Painting the plot
+    ax = sns.boxplot(x=df_transp_dry_work['transport'],y=df_transp_dry_work['income'],hue=df_transp_dry_work['transport'],order=transp_medians.index,hue_order=transp_medians.index, palette=colors_medians)
+    #Printing number of observations
+    nobs = df_transp_dry_work.groupby('transport').size().sort_index(ascending=True).values
+    nobs = [str(x) for x in nobs.tolist()]
+    nobs = ["n: " + i for i in nobs]
+    pos=range(len(nobs))
+    for tick,label in zip(pos,ax.get_xticklabels()):
+        plt.text(pos[tick], transp_medians.iloc[tick] - 8, nobs[tick], horizontalalignment='center', size='small', color='w', weight='semibold')
+
+    plt.title("Use of transport by income for workers, on dry conditions")
+    plt.savefig("./img/plots/box/transport_income_workers_dry.png");
+    print("Hypothesis 1 plotted")
