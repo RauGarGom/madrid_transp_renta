@@ -260,7 +260,6 @@ def dry_rain (df):
     rain = round(df[rain_filter].groupby('transport')["id_indiv"].count()/len(df[rain_filter])*100,1)
     weather = pd.concat([dry,rain],axis=1,keys=["dry","rain"])
     weather['difference'] = round(weather['rain']-weather['dry'],1)
-    print(weather['difference'])
     weather.to_csv("./data/output/weather.csv",index_label=False)
 
     dry_work_filter = (df['weather']=="dry") & (df['reason']=="work")
@@ -337,32 +336,52 @@ def income_dist(df):
     plt.savefig('./img/plots/hists/distr_income.png');
     print("Plotting distribution finished")
 
-def hypo_1(df):
+
+def hypo_1(df_filtered, jitter = False, n_obs = True, compare = "No"):
+    ###TODO: ¿Parece pintar en blanco? Funciona si se llama desde un Jupyter
     '''Includes all the needed plots to prove whether there is a link between income and transport usage, by workers.
-    It starts by selecting only the trips made by workers on dry days, and then it displays a box plot with a gradient of colors
-    given by the median of each group, printing the number of observations.
+    From a filtered dataframe, it starts by selecting only the trips made by workers on dry days, and then it displays 
+    a box plot with a gradient of colors given by the median of each group, printing the number of observations.
+    jitter plots the points so density analysis can be added, while n_obs lets us decide whether to include the number of 
+    observations for each plot or not.
+
+    The user can select whether they want to add a comparison with a hue, and if so, the column for it. They'll also select the
+    title and the name of the exported image.
     '''
     print("Plotting charts for hypothesis 1...")
-    df_transp_dry_work = df[(df["weather"] == "dry") & (df["reason"] == "work")]
     plt.figure()
     ###Colors
-    transp_medians = df_transp_dry_work.groupby('transport')['income'].median().sort_index(ascending=True)
-    initial_color = np.array([1, 0, 0])
-    final_color = np.array([0, 1, 0])
+    transp_medians = df_filtered.groupby('transport')['income'].median().sort_index(ascending=True)
+    initial_color = np.array([196/255, 78/255, 82/255])
+    final_color = np.array([85/255, 168/255, 104/255])
     norm_medians = (transp_medians-transp_medians.min()) / (transp_medians.max() - transp_medians.min())
     colors_medians = [mcolors.to_hex(initial_color * (1 - n) + final_color * n) for n in norm_medians]
 
     ### HIPÓTESIS 1: Análisis
     #Painting the plot
-    ax = sns.boxplot(x=df_transp_dry_work['transport'],y=df_transp_dry_work['income'],hue=df_transp_dry_work['transport'],order=transp_medians.index,hue_order=transp_medians.index, palette=colors_medians)
+    compare = (str(input("Do you want to hue by another column? Answer 'yes' if so: ")))
+    if compare == 'yes':
+        jitter = False
+        n_obs = False
+        col_input = str(input("Which column is it? "))
+        ax = sns.boxplot(data=df_filtered,x='transport',y='income',hue=col_input,order=transp_medians.index)
+    else:
+        ax = sns.boxplot(data=df_filtered,x='transport',y='income',hue='transport',hue_order=transp_medians.index,order=transp_medians.index, palette=colors_medians)
+    #Adding jitter
+    if jitter == True:
+        sns.stripplot(data=df_filtered,x='transport',y='income',size=2,color='black',edgecolor="darkgrey")
     #Printing number of observations
-    nobs = df_transp_dry_work.groupby('transport').size().sort_index(ascending=True).values
-    nobs = [str(x) for x in nobs.tolist()]
-    nobs = ["n: " + i for i in nobs]
-    pos=range(len(nobs))
-    for tick,label in zip(pos,ax.get_xticklabels()):
-        plt.text(pos[tick], transp_medians.iloc[tick] - 8, nobs[tick], horizontalalignment='center', size='small', color='w', weight='semibold')
+    if n_obs == True:
+        nobs = df_filtered.groupby('transport').size().sort_index(ascending=True).values
+        nobs = [str(x) for x in nobs.tolist()]
+        nobs = ["n: " + i for i in nobs]
+        pos=range(len(nobs))
+        for tick,label in zip(pos,ax.get_xticklabels()):
+            plt.text(pos[tick], transp_medians.iloc[tick] - 12, nobs[tick], horizontalalignment='center', size='small', color='w', weight='semibold',bbox=dict(facecolor='darkgrey', alpha=0.5))
 
-    plt.title("Use of transport by income for workers, on dry conditions")
-    plt.savefig("./img/plots/box/transport_income_workers_dry.png");
-    print("Hypothesis 1 plotted")
+    plt.title(input("What's the name of the title? "))
+    if compare == 'yes':
+        plt.legend(loc = 'lower right')
+    filename = input("Input name of the file: ")
+    plt.savefig("./img/plots/box/"+filename+".png")
+    print("Hypothesis 1 plotted");

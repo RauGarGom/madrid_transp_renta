@@ -23,3 +23,4 @@ Dados los datos utilizados, hemos de tener en cuenta varios puntos:
     + Renta != Riqueza. Estimaremos la cantidad de **generar** , no de **poseer**. Una persona sin trabajo pero con patrimonio no quedará reflejada en este estudio.
     + Por disponibilidad de los datos, se utilizarán las medias de las rentas. En función de disponibilidad de los datos, es posible que se recoja la media española en lugar de la de la Comunidad de Madrid.
 + Si bien no tiene impacto a primera vista sobre las hipótesis, se realizará un estudio de impacto de la **meteorología** sobre el uso de unos u otros medios transportes.
++ Trataremos todo el transporte público como único conjunto, un estudio más pormenorizado puede encontrar diferencias en este grupo.
