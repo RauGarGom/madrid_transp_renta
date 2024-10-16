@@ -38,7 +38,6 @@ def main_dfs_treat(trip,indiv,weather):
     indiv['datemerge'] = indiv['DANNO'].astype(str) + '-' + indiv['DMES'].astype(str) + '-' + indiv['DDIA'].astype(str)
     ### Concatenate columns so we get an unique id
     indiv['id_indiv']=indiv['ID_HOGAR'].astype(str) + indiv['ID_IND'].astype(str)
-    indiv.head()
     ### Merge of transp indiv and weather
     weather_merge = weather[['datemerge','tmed','prec']]
     indiv = pd.merge(indiv,weather_merge, on = 'datemerge', how = 'left')
@@ -183,6 +182,8 @@ def transp_conversion(df_transp):
     df_transp['week_day'] = np.where(df_transp['week_day'] == "3", "wednesday" ,df_transp['week_day'])
     df_transp['week_day'] = np.where(df_transp['week_day'] == "4", "thursday" ,df_transp['week_day'])
     
+    ###TODO: traducir meses también?
+
     #Weather - new variable from prec
     df_transp['weather'] = np.where(df_transp['prec'] < 0.1,"dry","rain")
 
@@ -249,6 +250,7 @@ def pie_charts(pies,df):
         plt.pie(df[pie].value_counts().values, labels = df[pie].value_counts().index,autopct='%1.1f%%')
         plt.title(pie)
         plt.savefig("./img/plots/pies/"+pie+"_distrib.png")
+        plt.show(),
     print("Pie charts generated in /img/plots/pies")
 
 def dry_rain (df):
@@ -269,6 +271,7 @@ def dry_rain (df):
     weather_work = pd.concat([dry_work,rain_work],axis=1,keys=["dry","rain"])
     weather_work['difference'] = round(weather_work['rain']-weather_work['dry'],1)
     weather_work.to_csv("./data/output/weather_work.csv",index_label=False)
+    print(weather_work.head())
     print("Dry/rain comparison saved on data/output")
 
 def aux_data_extraction():
@@ -299,8 +302,8 @@ def weather_change(df_weather,df_weather_work):
     plt.style.use('seaborn-v0_8-deep')
     print("Plotting weather comparison...")
     ###Colors
-    initial_color = np.array([0, 0, 1])
-    final_color = np.array([1, 0.5, 0])
+    initial_color = np.array([196/255, 78/255, 82/255])
+    final_color = np.array([85/255, 168/255, 104/255])
     norm_weather = (df_weather['difference']-df_weather['difference'].min()) / (df_weather['difference'].max() - df_weather['difference'].min())
     colors_weather = [mcolors.to_hex(initial_color * (1 - n) + final_color * n) for n in norm_weather]
     norm_weather_work = (df_weather_work['difference']-df_weather_work['difference'].min()) / (df_weather_work['difference'].max() - df_weather_work['difference'].min())
@@ -317,7 +320,8 @@ def weather_change(df_weather,df_weather_work):
     plt.ylim(-4, 4)
     plt.title("Difference of transport usage for workers when raining (percentual points)")
     plt.tight_layout()
-    plt.savefig("./img/plots/bars/transport_change_weather.png");
+    plt.savefig("./img/plots/bars/transport_change_weather.png")
+    plt.show();
     print("Weather comparison plotted and saved in img/plots/bars/transport_change_weather.png")
 
 def income_dist(df):
@@ -333,12 +337,12 @@ def income_dist(df):
     sns.histplot(df[df['activity'] == "worker"]['income'],label="Workers",bins=bins, multiple="layer")
     plt.title("Distribution of expected income")
     plt.legend()
-    plt.savefig('./img/plots/hists/distr_income.png');
+    plt.savefig('./img/plots/hists/distr_income.png')
+    plt.show();
     print("Plotting distribution finished")
 
 
-def hypo_1(df_filtered, jitter = False, n_obs = True, compare = "No"):
-    ###TODO: ¿Parece pintar en blanco? Funciona si se llama desde un Jupyter
+def hypo_1(df_filtered, title_name, file_name, col_compare="", jitter = False, n_obs = True, compare = False):
     '''Includes all the needed plots to prove whether there is a link between income and transport usage, by workers.
     From a filtered dataframe, it starts by selecting only the trips made by workers on dry days, and then it displays 
     a box plot with a gradient of colors given by the median of each group, printing the number of observations.
@@ -359,12 +363,10 @@ def hypo_1(df_filtered, jitter = False, n_obs = True, compare = "No"):
 
     ### HIPÓTESIS 1: Análisis
     #Painting the plot
-    compare = (str(input("Do you want to hue by another column? Answer 'yes' if so: ")))
-    if compare == 'yes':
+    if compare == True:
         jitter = False
         n_obs = False
-        col_input = str(input("Which column is it? "))
-        ax = sns.boxplot(data=df_filtered,x='transport',y='income',hue=col_input,order=transp_medians.index)
+        ax = sns.boxplot(data=df_filtered,x='transport',y='income',hue=col_compare,order=transp_medians.index)
     else:
         ax = sns.boxplot(data=df_filtered,x='transport',y='income',hue='transport',hue_order=transp_medians.index,order=transp_medians.index, palette=colors_medians)
     #Adding jitter
@@ -379,9 +381,64 @@ def hypo_1(df_filtered, jitter = False, n_obs = True, compare = "No"):
         for tick,label in zip(pos,ax.get_xticklabels()):
             plt.text(pos[tick], transp_medians.iloc[tick] - 12, nobs[tick], horizontalalignment='center', size='small', color='w', weight='semibold',bbox=dict(facecolor='darkgrey', alpha=0.5))
 
-    plt.title(input("What's the name of the title? "))
-    if compare == 'yes':
+    plt.title(title_name)
+    if compare == True:
         plt.legend(loc = 'lower right')
-    filename = input("Input name of the file: ")
-    plt.savefig("./img/plots/box/"+filename+".png")
-    print("Hypothesis 1 plotted");
+    plt.xlabel("Mode of transport")
+    plt.ylabel("Expected income")
+    plt.plot();
+    plt.savefig("./img/plots/box/"+file_name+".png")
+    print("Hypothesis 1 plotted")
+
+def hypo_2(df):
+    plt.style.use('seaborn-v0_8-deep')
+    df_transp_2 = df[(df["weather"] == "dry") & (df["reason"] == "work") & (df["transport"].isin(["car","public","walking"]))]
+    df_transp_2 = df_transp_2.groupby(['transport','gender'])[['id_indiv']].count().unstack()
+    df_transp_2 = round(df_transp_2/df_transp_2.sum()*100,1).stack(future_stack=True).reset_index()
+    df_transp_2
+    plt.figure()
+    sns.barplot(data=df_transp_2,x='transport',y='id_indiv',hue='gender',errorbar=None)
+    plt.title("Percentual usage of main transport modes for workers, by gender")
+    plt.xlabel("Mode of transport")
+    plt.ylabel("Percentage")
+    plt.savefig('./img/plots/bars/percen_transport_workers_gender.png')
+    plt.show();
+
+def hypo_1a(df_filtered, title_name, file_name, col_compare="", jitter = False, n_obs = True, compare = False):
+    '''Copy of hypo_1, by gender
+    '''
+    print("Plotting charts for hypothesis 1a...")
+    plt.figure()
+    ###Colors
+    transp_medians = df_filtered.groupby('gender')['income'].median().sort_index(ascending=True)
+    initial_color = np.array([196/255, 78/255, 82/255])
+    final_color = np.array([85/255, 168/255, 104/255])
+    norm_medians = (transp_medians-transp_medians.min()) / (transp_medians.max() - transp_medians.min())
+    colors_medians = [mcolors.to_hex(initial_color * (1 - n) + final_color * n) for n in norm_medians]
+
+    ### HIPÓTESIS 1a: Análisis by gender
+    #Painting the plot
+    if compare == True:
+        jitter = False
+        n_obs = False
+        ax = sns.boxplot(data=df_filtered,x='gender',y='income',hue=col_compare,hue_order=df_filtered[col_compare].unique().sort())
+    else:
+        ax = sns.boxplot(data=df_filtered,x='gender',y='income')
+    #Adding jitter
+    if jitter == True:
+        sns.stripplot(data=df_filtered,x='gender',y='income',size=2,color='black',edgecolor="darkgrey")
+    #Printing number of observations
+    if n_obs == True:
+        nobs = df_filtered.groupby('gender').size().sort_index(ascending=True).values
+        nobs = [str(x) for x in nobs.tolist()]
+        nobs = ["n: " + i for i in nobs]
+        pos=range(len(nobs))
+        for tick,label in zip(pos,ax.get_xticklabels()):
+            plt.text(pos[tick], transp_medians.iloc[tick] - 12, nobs[tick], horizontalalignment='center', size='small', color='w', weight='semibold',bbox=dict(facecolor='darkgrey', alpha=0.5))
+
+    plt.title(title_name)
+    if compare == True:
+        plt.legend(loc = 'lower right')
+    plt.plot();
+    plt.savefig("./img/plots/box/"+file_name+".png")
+    print("Hypothesis 1 plotted")
