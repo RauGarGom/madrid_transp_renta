@@ -28,5 +28,5 @@ ut.income_dist(df_transp)
 # Hypothesis 1:
 
 df_transp_dry_work_main = df_transp[(df_transp["weather"] == "dry") & (df_transp["reason"] == "work") & (df_transp["transport"].isin(["car","public","walking"]))]
-ut.hypo_1(df_transp_dry_work_main,jitter=True,n_obs=True)
+ut.hypo_1(df_transp_dry_work_main,title_name="test_main",file_name="test_main",jitter=True,n_obs=True)
 #Hypothesis 2:

@@ -90,8 +90,9 @@ def transp_conversion(df_transp):
     df_transp['studies'] = df_transp['studies'].astype(str)
     df_transp['gender'] = df_transp['gender'].astype(str)
     df_transp['week_day'] = df_transp['week_day'].astype(str)
+    df_transp['month'] = df_transp['month'].astype(str)
 
-    #Transport:
+    # Transport:
     ''' 
     "public". Includes the original 1,2,3,4,5,6,7,8 and 9
     "taxi". Includes the original 10
@@ -102,12 +103,12 @@ def transp_conversion(df_transp):
     "other". Includes 24
     '''
     public = ["1","2","3","4","5","6","7","8","9"]
-    taxi = ["10"]
+    taxi = []
     car = ["11","12","13","14","15","16"]
-    motorbike = ["17","18","19"]
-    bike = ["20","21","22"]
+    motorbike = []
+    bike = []
     walking = ["24"]
-    other = ["23"]
+    other = ["23","17","18","19","10","20","21","22"]
 
     df_transp['transport'] = np.where(df_transp['transport'].isin(public), "public" ,df_transp['transport'])
     df_transp['transport'] = np.where(df_transp['transport'].isin(taxi), "taxi" ,df_transp['transport'])
@@ -117,7 +118,7 @@ def transp_conversion(df_transp):
     df_transp['transport'] = np.where(df_transp['transport'].isin(walking), "walking" ,df_transp['transport'])
     df_transp['transport'] = np.where(df_transp['transport'].isin(other), "other" ,df_transp['transport'])
 
-    #Reason:
+    # Reason:
     '''
     "home". Includes the original 1 and 11.
     "work". Includes 2 and 3.
@@ -126,13 +127,13 @@ def transp_conversion(df_transp):
     "personal". Includes 6,7,10
     "other". Includes 12.
     '''
-    home = ["1","11"]
+    home = []
     work = ["2","3"]
     study = ["4"]
     leisure = ["8","9"]
     shopping = ["5"]
     personal = ["6","7","10"]
-    other = ["12"]
+    other = ["12","1","11"]
 
     df_transp['reason'] = np.where(df_transp['reason'].isin(home), "home" ,df_transp['reason'])
     df_transp['reason'] = np.where(df_transp['reason'].isin(work), "work" ,df_transp['reason'])
@@ -176,15 +177,21 @@ def transp_conversion(df_transp):
     # Gender:
     df_transp['gender'] = np.where(df_transp['gender'] == "1", "male" ,"female")
 
-    #Day of week:
+    # Day of week:
     df_transp['week_day'] = np.where(df_transp['week_day'] == "1", "monday" ,df_transp['week_day'])
     df_transp['week_day'] = np.where(df_transp['week_day'] == "2", "tuesday" ,df_transp['week_day'])
     df_transp['week_day'] = np.where(df_transp['week_day'] == "3", "wednesday" ,df_transp['week_day'])
     df_transp['week_day'] = np.where(df_transp['week_day'] == "4", "thursday" ,df_transp['week_day'])
     
-    ###TODO: traducir meses también?
+    # Month
+    df_transp['month'] = np.where(df_transp['month'] == "2", "February" ,df_transp['month'])
+    df_transp['month'] = np.where(df_transp['month'] == "3", "March" ,df_transp['month'])
+    df_transp['month'] = np.where(df_transp['month'] == "4", "April" ,df_transp['month'])
+    df_transp['month'] = np.where(df_transp['month'] == "5", "May" ,df_transp['month'])
+    df_transp['month'] = np.where(df_transp['month'] == "6", "June" ,df_transp['month'])
 
-    #Weather - new variable from prec
+
+    # Weather - new variable from prec
     df_transp['weather'] = np.where(df_transp['prec'] < 0.1,"dry","rain")
 
     print("Data converted")
@@ -236,6 +243,8 @@ def income_assign(df_main,df_educ,df_occup,df_gender_age):
     df_main['income'] = np.where((df_main['gender'] == 'female') & (df_main['age'] >= 30) & (df_main['age'] < 45), df_main['income']+50*df_gender_age.iloc[2,1],df_main['income'])
     df_main['income'] = np.where((df_main['gender'] == 'female') & (df_main['age'] >= 45) & (df_main['age'] < 65), df_main['income']+50*df_gender_age.iloc[3,1],df_main['income'])
     df_main['income'] = np.where((df_main['gender'] == 'female') & (df_main['age'] >= 65), df_main['income']+50*df_gender_age.iloc[4,1],df_main['income'])
+
+
     df_main.to_csv("./data/treated/transp.csv",index_label=False)
     print("Income assigned and updated in ./data/treated/transp.csv")
     return df_main
@@ -246,9 +255,12 @@ def pie_charts(pies,df):
     print("Generating pie charts...")
     plt.style.use('seaborn-v0_8-deep')
     for pie in pies:
-        plt.figure()
+        plt.figure(figsize=(6,4))
         plt.pie(df[pie].value_counts().values, labels = df[pie].value_counts().index,autopct='%1.1f%%')
-        plt.title(pie)
+        my_circle=plt.Circle( (0,0), 0.8, color='white')
+        p=plt.gcf()
+        p.gca().add_artist(my_circle)
+        plt.title("Proportions of the column " + pie)
         plt.savefig("./img/plots/pies/"+pie+"_distrib.png")
         plt.show(),
     print("Pie charts generated in /img/plots/pies")
@@ -271,7 +283,6 @@ def dry_rain (df):
     weather_work = pd.concat([dry_work,rain_work],axis=1,keys=["dry","rain"])
     weather_work['difference'] = round(weather_work['rain']-weather_work['dry'],1)
     weather_work.to_csv("./data/output/weather_work.csv",index_label=False)
-    print(weather_work.head())
     print("Dry/rain comparison saved on data/output")
 
 def aux_data_extraction():
@@ -314,10 +325,12 @@ def weather_change(df_weather,df_weather_work):
     plt.subplot(2, 1, 1) # filas, columnas, posición
     plt.bar(df_weather.index,df_weather['difference'],color=colors_weather)
     plt.ylim(-4, 4)
+    plt.axhline(y=0, linestyle=':', linewidth=2)
     plt.title("Difference of transport usage when raining (percentual points)")
     plt.subplot(2, 1, 2) # filas, columnas, posición
     plt.bar(df_weather_work.index,df_weather_work['difference'],color=colors_weather_work)
     plt.ylim(-4, 4)
+    plt.axhline(y=0,linestyle=':', linewidth=2)
     plt.title("Difference of transport usage for workers when raining (percentual points)")
     plt.tight_layout()
     plt.savefig("./img/plots/bars/transport_change_weather.png")
@@ -397,7 +410,7 @@ def hypo_2(df):
     df_transp_2 = round(df_transp_2/df_transp_2.sum()*100,1).stack(future_stack=True).reset_index()
     df_transp_2
     plt.figure()
-    sns.barplot(data=df_transp_2,x='transport',y='id_indiv',hue='gender',errorbar=None)
+    sns.barplot(data=df_transp_2,x='transport',y='id_indiv',hue='gender',errorbar=None,edgecolor=".5",linewidth=2)
     plt.title("Percentual usage of main transport modes for workers, by gender")
     plt.xlabel("Mode of transport")
     plt.ylabel("Percentage")
