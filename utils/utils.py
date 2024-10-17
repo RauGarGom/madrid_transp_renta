@@ -434,7 +434,48 @@ def hypo_1a(df_filtered, title_name, file_name, col_compare="", jitter = False, 
     if compare == True:
         jitter = False
         n_obs = False
-        ax = sns.boxplot(data=df_filtered,x='gender',y='income',hue=col_compare,hue_order=df_filtered[col_compare].unique().sort())
+        ax = sns.boxplot(data=df_filtered,x='gender',y='income',hue=col_compare,hue_order=df_filtered[col_compare].unique())
+        
+    else:
+        ax = sns.boxplot(data=df_filtered,x='gender',y='income')
+    #Adding jitter
+    if jitter == True:
+        sns.stripplot(data=df_filtered,x='gender',y='income',size=2,color='black',edgecolor="darkgrey")
+    #Printing number of observations
+    if n_obs == True:
+        nobs = df_filtered.groupby('gender').size().sort_index(ascending=True).values
+        nobs = [str(x) for x in nobs.tolist()]
+        nobs = ["n: " + i for i in nobs]
+        pos=range(len(nobs))
+        for tick,label in zip(pos,ax.get_xticklabels()):
+            plt.text(pos[tick], transp_medians.iloc[tick] - 12, nobs[tick], horizontalalignment='center', size='small', color='w', weight='semibold',bbox=dict(facecolor='darkgrey', alpha=0.5))
+
+    plt.title(title_name)
+    if compare == True:
+        plt.legend(loc = 'lower right')
+    plt.plot();
+    plt.savefig("./img/plots/box/"+file_name+".png")
+    print("Hypothesis 1 plotted")
+
+def hypo_1b(df_filtered, title_name, file_name, col_compare="", jitter = False, n_obs = True, compare = False):
+    '''Copy of hypo_1, by gender
+    '''
+    print("Plotting charts for hypothesis 1a...")
+    plt.figure()
+    ###Colors
+    transp_medians = df_filtered.groupby('gender')['income'].median().sort_index(ascending=True)
+    initial_color = np.array([196/255, 78/255, 82/255])
+    final_color = np.array([85/255, 168/255, 104/255])
+    norm_medians = (transp_medians-transp_medians.min()) / (transp_medians.max() - transp_medians.min())
+    colors_medians = [mcolors.to_hex(initial_color * (1 - n) + final_color * n) for n in norm_medians]
+
+    ### HIPÓTESIS 1a: Análisis by gender
+    #Painting the plot
+    if compare == True:
+        jitter = False
+        n_obs = False
+        ax = sns.boxplot(data=df_filtered,x='gender',y='income',hue='transport',hue_order=df_filtered['transport'].unique())
+        
     else:
         ax = sns.boxplot(data=df_filtered,x='gender',y='income')
     #Adding jitter
