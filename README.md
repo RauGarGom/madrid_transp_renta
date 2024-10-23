@@ -18,8 +18,8 @@ The study is focused on **workers'** behaviour on **dry** days and, although mos
 ## Main resources and libraries
 The results of the analysis are shown on different media:
 + The [work journal](work_journal.ipynb), where a comprehensive walkthrough of the project is given.
-+ A [presentation](media\ENG_EDA_Transp_Madrid.pdf) where the key information can be found.
-+ A [Power BI Dashboard](media\dashboard.pbix), which may be used as a fast and interactive way of exploring the main data used by the project.
++ A [presentation](media/ENG_EDA_Transp_Madrid.pdf) where the key information can be found.
++ A [Power BI Dashboard](media/dashboard.pbix), which may be used as a fast and interactive way of exploring the main data used by the project.
 
 The versions of the languages and libraries used are:
 + Python: 3.12.5
@@ -64,8 +64,8 @@ El estudio se centra en el comoportamiento de los **trabajadores** los días **s
 ## Recursos principales y librerías
 Los resultados de este análisis se muestran en diferentes archivos:
 + La [memoria](memoria.ipynb) del proyecto, donde podemos encontrar una guía exhaustiva de los pasos seguidos a lo largo del proyecto.
-+ Una [presentación](media\EDA_Transp_Madrid.pdf), donde se muestran los principales resultados y conclusiones del estudio.
-+ Un [dashboard](media\dashboard.pbix) de Power BI, una forma rápida e interactiva de explorar los datos utilizados para el proyecto.
++ Una [presentación](media/EDA_Transp_Madrid.pdf), donde se muestran los principales resultados y conclusiones del estudio.
++ Un [dashboard](media/dashboard.pbix) de Power BI, una forma rápida e interactiva de explorar los datos utilizados para el proyecto.
 
 Se han utilizado las siguientes versiones de lenguajes y librerías:
 + Python: 3.12.5
