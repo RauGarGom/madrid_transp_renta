@@ -1,6 +1,6 @@
 <img src="./img/metro_madrid.jpg" alt="drawing" width="500"/>
 
-:es: [Spanish version below!](#Transporte-y-renta:-desigualdad-en-Madrid)
+:es: [Spanish version below!](#10)
 
 # :uk: / :us: Transport and Income: Inequality in Madrid
 
@@ -44,8 +44,10 @@ There are some points that have to be taken into account through the analysis:
 + The real income from the users is unknown to us. As it is a constructed indicator (as explained above), it is important to point out:
     + **Income is not wealth**. Wealth is a much more complicated and obscure indicator. We must take into account that this analysis won't cover, for example, citizens with low income but high wealth (which may behave similarly to those with high income or not).
     + The Survey of Life Conditions publishes the **main** income, which is the used data to build said indicator.
-    + Four socioeconomic conditions are used for this: **Level of education** (4 categories), **gender**(2), **occupation**(5) and **age**(5). This means the constructed indicator will have a maximum of **200 unique values**.
+    + Four socioeconomic conditions are used for this: **Level of education** (4 categories), **gender** (2), **occupation** (5) and **age** (5). This means the constructed indicator will have a maximum of **200 unique values**.
 + Public transport is treated **as a whole**, and possible differences between each mean of public transport aren't discussed in this project.
+
+<a id="10"></a> <br>  
 
 # :es: 
 # Transporte y renta: desigualdad en Madrid
@@ -89,5 +91,5 @@ Dados los datos utilizados, hemos de tener en cuenta varios puntos:
 + No contamos con la renta real de los encuestados. Para ello generaremos un dato estimado en función de las condiciones socioeconómicas de los encuestados.
     + **Renta no implica riqueza**. La riqueza es un indicador complejo y muy difícil de estimar, con lo que hemos de tener en cuenta que este análisis no recogerá, por ejemplo, casos con renta baja pero alta riqueza (que pueden comportarse de forma similar a aquellos con renta alta, o no).
     + La Encuesta de Condiciones de Vida publica la renta **media**, que será el dato utilizado para construir dicho indicador.
-    + Se utilizan cuatro condiciones socioeconómicas para este: **Nivel de educación** (4 categorías), **género**(2), **ocupación**(5) y **edad**(5). Esto implica que el indicador creado en el proyecto contará con un máximo de **200 valores únicos** 
+    + Se utilizan cuatro condiciones socioeconómicas para este: **Nivel de educación** (4 categorías), **género** (2), **ocupación** (5) y **edad** (5). Esto implica que el indicador creado en el proyecto contará con un máximo de **200 valores únicos** 
 + Tratamos todo el transporte público como **un único conjunto**, este estudio no pormenoriza en posibles diferencias entre cada modo de transporte público.
